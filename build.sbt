@@ -30,7 +30,7 @@ val opticsVersion = "0.15.0"
 
 val catsVersion = "2.13.0"
 val jawnVersion = "1.6.0"
-val shapelessVersion = "2.3.12"
+val shapelessVersion = "2.3.13"
 
 val paradiseVersion = "2.1.1"
 
