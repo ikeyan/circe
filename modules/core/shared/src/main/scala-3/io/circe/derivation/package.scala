@@ -18,7 +18,7 @@ package io.circe.derivation
 
 import scala.compiletime.{ codeOf, constValue, erasedValue, error, summonFrom, summonInline }
 import scala.deriving.Mirror
-import io.circe.{ Codec, Decoder, Encoder }
+import io.circe.{ Decoder, Encoder }
 
 private[circe] inline final def summonLabels[T <: Tuple]: List[String] =
   loopUnrolledNoArg[String, T](
@@ -91,25 +91,25 @@ private[circe] inline final def loopUnrolled[A, Arg, T <: Tuple](f: Inliner[A, A
 private[circe] inline def loopUnrolledNoArg[A, T <: Tuple](f: Inliner[A, Unit]): List[A] =
   loopUnrolled[A, Unit, T](f, ())
 
-private[circe] trait Inliner[A, Arg]:
+sealed trait Inliner[A, Arg]:
   inline def apply[T](inline arg: Arg): A
 
-private[circe] object constString extends Inliner[String, Unit]:
+object constString extends Inliner[String, Unit]:
   inline def apply[T](inline arg: Unit): String = constValue[T].asInstanceOf[String]
 
-private[circe] class EncoderDeriveSum(using config: Configuration) extends Inliner[Encoder[_], Unit]:
+class EncoderDeriveSum(using config: Configuration) extends Inliner[Encoder[_], Unit]:
   inline def apply[T](inline arg: Unit): Encoder[?] = summonEncoder[T](true)
 
-private[circe] class EncoderNotDeriveSum(using config: Configuration) extends Inliner[Encoder[_], Unit]:
+class EncoderNotDeriveSum(using config: Configuration) extends Inliner[Encoder[_], Unit]:
   inline def apply[T](inline arg: Unit): Encoder[?] = summonEncoder[T](false)
 
-private[circe] class DecoderDeriveSum(using Configuration) extends Inliner[Decoder[_], Unit]:
+class DecoderDeriveSum(using Configuration) extends Inliner[Decoder[_], Unit]:
   inline def apply[T](inline arg: Unit): Decoder[?] = summonDecoder[T](true)
 
-private[circe] class DecoderNotDeriveSum(using Configuration) extends Inliner[Decoder[_], Unit]:
+class DecoderNotDeriveSum(using Configuration) extends Inliner[Decoder[_], Unit]:
   inline def apply[T](inline arg: Unit): Decoder[?] = summonDecoder[T](false)
 
-private[circe] class SummonSingleton[A] extends Inliner[A, Any]:
+class SummonSingleton[A] extends Inliner[A, Any]:
   inline def apply[T](inline typeName: Any): A =
     inline summonInline[Mirror.Of[T]] match
       case m: Mirror.Singleton => m.fromProduct(EmptyTuple).asInstanceOf[A]
