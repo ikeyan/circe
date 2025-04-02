@@ -297,4 +297,12 @@ class SemiautoDerivationSuite extends CirceMunitSuite {
 
   testLocalCaseClasses()
   testLocalAdts()
+
+  test("Decoder for ADT/Encoder ignores superfluous keys") {
+    import io.circe.parser.decode
+    val expected = Right(Adt1.Class1(3))
+    assertEquals(decode[Adt1]("""{"Class1":{"int":3}}"""), expected)
+    assertEquals(decode[Adt1]("""{"extraField":true,"Class1":{"int":3}}"""), expected)
+    assertEquals(decode[Adt1]("""{"Class1":{"int":3},"extraField":true}"""), expected)
+  }
 }
