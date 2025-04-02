@@ -23,6 +23,7 @@ import cats.data.{ NonEmptyList, Validated }
 import io.circe.{ ACursor, Decoder, DecodingFailure, HCursor }
 import io.circe.DecodingFailure.Reason.WrongTypeExpectation
 import cats.implicits.*
+import scala.annotation.tailrec
 import scala.collection.immutable.Map
 import scala.quoted.*
 
@@ -49,20 +50,17 @@ trait ConfiguredDecoder[A](using conf: Configuration) extends Decoder[A]:
   /** Decodes a class/object/case of a Sum type handling discriminator and strict decoding. */
   private def decodeSumElement[R](c: HCursor)(fail: DecodingFailure => R, decode: Decoder[A] => ACursor => R): R =
 
+    @tailrec
     def fromName(sumTypeName: String, cursor: ACursor, fallBacks: Iterator[(String, ACursor)]): R =
-      decodersDict
-        .get(sumTypeName)
-        .fold {
-          if (fallBacks.hasNext) {
-            val (sumTypeName, cursor) = fallBacks.next()
-            fromName(sumTypeName, cursor, fallBacks)
-          } else {
-            fail(DecodingFailure(s"type $name has no class/object/case named '$sumTypeName'.", cursor.history))
-          }
-
-        } { decoder =>
+      decodersDict.get(sumTypeName) match {
+        case Some(decoder) =>
           decode(decoder.asInstanceOf[Decoder[A]])(cursor)
-        }
+        case _ if fallBacks.hasNext =>
+          val (sumTypeName, cursor) = fallBacks.next()
+          fromName(sumTypeName, cursor, fallBacks)
+        case _ =>
+          fail(DecodingFailure(s"type $name has no class/object/case named '$sumTypeName'.", cursor.history))
+      }
 
     conf.discriminator match
       case Some(discriminator) =>
