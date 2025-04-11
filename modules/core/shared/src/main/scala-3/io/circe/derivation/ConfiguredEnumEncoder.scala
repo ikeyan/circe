@@ -17,23 +17,24 @@
 package io.circe.derivation
 
 import scala.deriving.Mirror
+import scala.reflect.TypeTest
 import scala.compiletime.constValue
 import Predef.genericArrayOps
 import io.circe.{ Encoder, Json }
 
 trait ConfiguredEnumEncoder[A] extends Encoder[A]
 object ConfiguredEnumEncoder:
-  private def of[A](
-    labels: List[String]
-  )(using conf: Configuration, mirror: Mirror.SumOf[A]): ConfiguredEnumEncoder[A] =
+  private def of[A](cases: List[SingletonCase[A]])(using conf: Configuration): ConfiguredEnumEncoder[A] =
     new ConfiguredEnumEncoder[A]:
-      private val labelOf = labels.toArray.map(conf.transformConstructorNames)
-      def apply(a: A) = Json.fromString(labelOf(mirror.ordinal(a)))
+      private val labelsMap =
+        cases.map(c => (c.value, conf.transformConstructorNames(c.label))).toMap[A, String]
+
+      def apply(a: A) = Json.fromString(labelsMap(a))
 
   inline final def derived[A](using conf: Configuration, mirror: Mirror.SumOf[A]): ConfiguredEnumEncoder[A] =
-    // Only used to validate if all cases are singletons
-    summonSingletonCases[mirror.MirroredElemTypes, A](constValue[mirror.MirroredLabel])
-    ConfiguredEnumEncoder.of[A](summonLabels[mirror.MirroredElemLabels])
+    ConfiguredEnumEncoder.of[A](
+      cases = summonSingletonCases[mirror.MirroredElemTypes, A](constValue[mirror.MirroredLabel])
+    )
 
   inline final def derive[A: Mirror.SumOf](
     transformConstructorNames: String => String = Configuration.default.transformConstructorNames

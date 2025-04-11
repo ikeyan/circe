@@ -43,6 +43,27 @@ object ConfiguredEnumDerivesSuites:
         Gen.const(IntercardinalDirections.NorthWest)
       )
     )
+
+  sealed trait HierarchicalEnum
+  object HierarchicalEnum:
+    sealed trait NestedA extends HierarchicalEnum
+    sealed trait NestedB extends HierarchicalEnum
+
+    case object A extends HierarchicalEnum
+    case object B extends NestedA
+    case object C extends NestedB
+    case object D extends NestedA, NestedB // diamond structure
+
+    given Eq[HierarchicalEnum] = Eq.fromUniversalEquals
+    given Arbitrary[HierarchicalEnum] = Arbitrary(
+      Gen.oneOf(
+        Gen.const(HierarchicalEnum.A),
+        Gen.const(HierarchicalEnum.B),
+        Gen.const(HierarchicalEnum.C),
+        Gen.const(HierarchicalEnum.D)
+      )
+    )
+
 class ConfiguredEnumDerivesSuites extends CirceMunitSuite:
   import ConfiguredEnumDerivesSuites.*
 
@@ -100,4 +121,28 @@ class ConfiguredEnumDerivesSuites extends CirceMunitSuite:
     val json = Json.fromString("south-west")
     assert(summon[Encoder[IntercardinalDirections]].apply(direction) === json)
     assert(summon[Decoder[IntercardinalDirections]].decodeJson(json) === Right(direction))
+  }
+
+  test("Should work with nested hierarchies") {
+    given Configuration = Configuration.default
+    given Codec[HierarchicalEnum] = ConfiguredEnumCodec.derived
+    {
+      val value = HierarchicalEnum.A
+      val json = Json.fromString("A")
+      assertEquals(summon[Encoder[HierarchicalEnum]].apply(value), json)
+      assertEquals(summon[Decoder[HierarchicalEnum]].decodeJson(json), Right(value))
+    }
+
+    {
+      val value = HierarchicalEnum.C
+      val json = Json.fromString("C")
+      assertEquals(summon[Encoder[HierarchicalEnum]].apply(value), json)
+      assertEquals(summon[Decoder[HierarchicalEnum]].decodeJson(json), Right(value))
+    }
+  }
+
+  {
+    given Configuration = Configuration.default
+    given Codec[HierarchicalEnum] = ConfiguredEnumCodec.derived
+    checkAll("Codec[HierarchicalEnum] (default configuration)", CodecTests[HierarchicalEnum].codec)
   }

@@ -13,7 +13,8 @@ ThisBuild / tlFatalWarnings := false // we currently have a lot of warnings that
 
 ThisBuild / organization := "io.circe"
 ThisBuild / crossScalaVersions := List(Scala3V, Scala212V, Scala213V)
-ThisBuild / scalaVersion := Scala213V
+// ThisBuild / scalaVersion := Scala213V
+ThisBuild / scalaVersion := Scala3V
 
 ThisBuild / githubWorkflowJavaVersions := Seq("8", "11", "17").map(JavaSpec.temurin)
 
