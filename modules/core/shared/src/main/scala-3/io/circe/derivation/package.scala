@@ -74,22 +74,17 @@ private[circe] inline final def summonDecoder[A](inline derivingForSum: Boolean)
 private[circe] final case class SingletonCase[A](label: String, value: A)
 
 private[circe] inline final def summonSingletonCase[T, A](inline typeName: Any): List[SingletonCase[A]] =
-  summonFrom {
-    case m: Mirror.Of[T] => inline m match 
-      case m: Mirror.Singleton => List(SingletonCase(
-        value = m.fromProduct(EmptyTuple).asInstanceOf[A],
-        label = constValue[m.MirroredLabel]
-      ))
-      case m: Mirror.SumOf[T] => summonSingletonCases[m.MirroredElemTypes, A](typeName)
-      case m: Mirror =>
-        error("Enum " + codeOf(typeName) + " contains non singleton case " + codeOf(constValue[m.MirroredLabel]))
-
-    case _ => List(SingletonCase(
-      value = constValue[A],
-      label = constValue[T].asInstanceOf[String]
-    )
-    )
-  } 
+  inline summonInline[Mirror.Of[T]] match
+    case m: Mirror.Singleton =>
+      List(
+        SingletonCase(
+          value = m.fromProduct(EmptyTuple).asInstanceOf[A],
+          label = constValue[m.MirroredLabel]
+        )
+      )
+    case m: Mirror.SumOf[T] => summonSingletonCases[m.MirroredElemTypes, A](typeName)
+    case m: Mirror =>
+      error("Enum " + codeOf(typeName) + " contains non singleton case " + codeOf(constValue[m.MirroredLabel]))
 
 private[circe] inline def summonSingletonCases[T <: Tuple, A](inline typeName: Any): List[SingletonCase[A]] =
   loopUnrolled[List[SingletonCase[A]], Any, T](new SummonSingleton[A], typeName).flatten

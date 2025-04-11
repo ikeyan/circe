@@ -17,19 +17,17 @@
 package io.circe.derivation
 
 import scala.deriving.Mirror
-import scala.reflect.TypeTest
 import scala.compiletime.constValue
-import Predef.genericArrayOps
 import io.circe.{ Encoder, Json }
 
 trait ConfiguredEnumEncoder[A] extends Encoder[A]
 object ConfiguredEnumEncoder:
   private def of[A](cases: List[SingletonCase[A]])(using conf: Configuration): ConfiguredEnumEncoder[A] =
     new ConfiguredEnumEncoder[A]:
-      private val labelsMap =
+      private val valuesMap =
         cases.map(c => (c.value, conf.transformConstructorNames(c.label))).toMap[A, String]
 
-      def apply(a: A) = Json.fromString(labelsMap(a))
+      def apply(a: A) = Json.fromString(valuesMap(a))
 
   inline final def derived[A](using conf: Configuration, mirror: Mirror.SumOf[A]): ConfiguredEnumEncoder[A] =
     ConfiguredEnumEncoder.of[A](
