@@ -27,7 +27,7 @@ object ConfiguredEnumDecoder:
   ): ConfiguredEnumDecoder[A] = new ConfiguredEnumDecoder[A]:
     private val labelsMap =
       cases.map(c => (conf.transformConstructorNames(c.label), c.value)).toMap[String, A]
-    
+
     def apply(c: HCursor) = c.as[String].flatMap { caseName =>
       labelsMap.get(caseName) match
         case None    => Left(DecodingFailure(s"enum $name does not contain case: $caseName", c.history))
@@ -37,7 +37,7 @@ object ConfiguredEnumDecoder:
   inline final def derived[A](using conf: Configuration, mirror: Mirror.SumOf[A]): ConfiguredEnumDecoder[A] =
     ConfiguredEnumDecoder.of[A](
       constValue[mirror.MirroredLabel],
-      summonSingletonCases[mirror.MirroredElemTypes, A](constValue[mirror.MirroredLabel]),
+      summonSingletonCases[mirror.MirroredElemTypes, A](constValue[mirror.MirroredLabel])
     )
 
   inline final def derive[R: Mirror.SumOf](
