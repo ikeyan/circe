@@ -18,27 +18,26 @@ package io.circe.derivation
 
 import scala.deriving.Mirror
 import scala.compiletime.constValue
-import Predef.genericArrayOps
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 
 trait ConfiguredEnumDecoder[A] extends Decoder[A]
 object ConfiguredEnumDecoder:
-  private def of[A](name: String, cases: List[A], labels: List[String])(using
+  private def of[A](name: String, cases: List[SingletonCase[A]])(using
     conf: Configuration
   ): ConfiguredEnumDecoder[A] = new ConfiguredEnumDecoder[A]:
-    private val caseOf = cases.toVector
-    private val lbls = labels.toArray.map(conf.transformConstructorNames)
+    private val labelsMap =
+      cases.map(c => (conf.transformConstructorNames(c.label), c.value)).toMap[String, A]
+
     def apply(c: HCursor) = c.as[String].flatMap { caseName =>
-      lbls.indexOf(caseName) match
-        case -1    => Left(DecodingFailure(s"enum $name does not contain case: $caseName", c.history))
-        case index => Right(caseOf(index))
+      labelsMap.get(caseName) match
+        case None    => Left(DecodingFailure(s"enum $name does not contain case: $caseName", c.history))
+        case Some(a) => Right(a)
     }
 
   inline final def derived[A](using conf: Configuration, mirror: Mirror.SumOf[A]): ConfiguredEnumDecoder[A] =
     ConfiguredEnumDecoder.of[A](
       constValue[mirror.MirroredLabel],
-      summonSingletonCases[mirror.MirroredElemTypes, A](constValue[mirror.MirroredLabel]),
-      summonLabels[mirror.MirroredElemLabels]
+      summonSingletonCases[mirror.MirroredElemTypes, A](constValue[mirror.MirroredLabel])
     )
 
   inline final def derive[R: Mirror.SumOf](

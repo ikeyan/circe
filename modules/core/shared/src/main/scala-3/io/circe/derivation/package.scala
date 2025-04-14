@@ -71,8 +71,23 @@ private[circe] inline final def summonDecoder[A](inline derivingForSum: Boolean)
       else error("Failed to find an instance of Decoder[" + typeName[A] + "]")
   }
 
-private[circe] inline def summonSingletonCases[T <: Tuple, A](inline typeName: Any): List[A] =
-  loopUnrolled[A, Any, T](new SummonSingleton[A], typeName)
+private[circe] final case class SingletonCase[A](label: String, value: A)
+
+private[circe] inline final def summonSingletonCase[T, A](inline typeName: Any): List[SingletonCase[A]] =
+  inline summonInline[Mirror.Of[T]] match
+    case m: Mirror.Singleton =>
+      List(
+        SingletonCase(
+          value = m.fromProduct(EmptyTuple).asInstanceOf[A],
+          label = constValue[m.MirroredLabel]
+        )
+      )
+    case m: Mirror.SumOf[T] => summonSingletonCases[m.MirroredElemTypes, A](typeName)
+    case m: Mirror =>
+      error("Enum " + codeOf(typeName) + " contains non singleton case " + codeOf(constValue[m.MirroredLabel]))
+
+private[circe] inline def summonSingletonCases[T <: Tuple, A](inline typeName: Any): List[SingletonCase[A]] =
+  loopUnrolled[List[SingletonCase[A]], Any, T](new SummonSingleton[A], typeName).flatten
 
 private[circe] inline final def loopUnrolled[A, Arg, T <: Tuple](f: Inliner[A, Arg], inline arg: Arg): List[A] =
   inline erasedValue[T] match
@@ -109,9 +124,5 @@ class DecoderDeriveSum(using Configuration) extends Inliner[Decoder[_], Unit]:
 class DecoderNotDeriveSum(using Configuration) extends Inliner[Decoder[_], Unit]:
   inline def apply[T](inline arg: Unit): Decoder[?] = summonDecoder[T](false)
 
-class SummonSingleton[A] extends Inliner[A, Any]:
-  inline def apply[T](inline typeName: Any): A =
-    inline summonInline[Mirror.Of[T]] match
-      case m: Mirror.Singleton => m.fromProduct(EmptyTuple).asInstanceOf[A]
-      case m: Mirror =>
-        error("Enum " + codeOf(typeName) + " contains non singleton case " + codeOf(constValue[m.MirroredLabel]))
+class SummonSingleton[A] extends Inliner[List[SingletonCase[A]], Any]:
+  inline def apply[T](inline typeName: Any): List[SingletonCase[A]] = summonSingletonCase[T, A](typeName)
