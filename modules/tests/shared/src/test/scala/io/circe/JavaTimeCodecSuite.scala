@@ -23,7 +23,7 @@ import java.time._
 import org.scalacheck._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Prop._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 case class JavaTimeCaseClass(foo: Duration, bar: Option[LocalTime], baz: List[ZoneId])
 
