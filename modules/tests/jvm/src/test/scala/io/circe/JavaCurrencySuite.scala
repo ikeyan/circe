@@ -21,7 +21,7 @@ import io.circe.testing.CodecTests
 import io.circe.tests.CirceMunitSuite
 import java.util.Currency
 import org.scalacheck._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 final class JavaCurrencySuite extends CirceMunitSuite {
   import JavaCurrencySuite._
